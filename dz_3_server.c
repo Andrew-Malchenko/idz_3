@@ -6,7 +6,6 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 
-#define PORT 8888
 #define MAX_CLIENTS 2
 #define MAX_THREADS 1
 #define BUFFER_SIZE 1024
@@ -90,27 +89,22 @@ int main(int argc, char **argv) {
     HoneyPot honey_pot = { 0, 10, PTHREAD_MUTEX_INITIALIZER };
     pthread_t threads[MAX_THREADS];
 
-    // Create server socket
     if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
         error("Failed to create socket");
     }
 
-    // Set socket options
     if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
         error("Failed to set socket options");
     }
 
-    // Configure server address
     server_address.sin_family = AF_INET;
     server_address.sin_addr.s_addr = inet_addr(argv[1]);
     server_address.sin_port = htons(atoi(argv[2]));
 
-    // Bind the socket to the specified address and port
     if (bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
         error("Failed to bind");
     }
 
-    // Start listening for incoming connections
     if (listen(server_socket, MAX_CLIENTS) < 0) {
         error("Failed to listen");
     }
@@ -119,7 +113,6 @@ int main(int argc, char **argv) {
 
     int bee_socket, bear_socket;
 
-    // Accept client connections
     int address_size = sizeof(client_address);
     for (int i = 0; i < MAX_CLIENTS; i++) {
         if ((client_socket = accept(server_socket, (struct sockaddr *)&client_address, (socklen_t *)&address_size)) < 0) {
@@ -153,7 +146,6 @@ int main(int argc, char **argv) {
     if (pthread_create(&threads[0], NULL, handle_client, (void*)client_data) != 0) {
         error("Failed to create thread");
     }
-    // Wait for all threads to finish
     for (int i = 0; i < MAX_THREADS; i++) {
         pthread_join(threads[i], NULL);
     }
