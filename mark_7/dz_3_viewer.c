@@ -34,16 +34,14 @@ int main(int argc, char **argv) {
     if (connect(client_socket, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
         error("Failed to connect to the server");
     }
-    if (send(client_socket, "viewer", strlen("bear"), 0) < 0) {
+    if (send(client_socket, "viewer", strlen("viewer"), 0) < 0) {
         error("Failed to send message to the server");
     }
+    printf("Bear is sleep\n");
     while (1) {
-        printf("Bear is sleep\n");
         char response[BUFFER_SIZE];
         memset(response, 0, sizeof(response));
-        if (recv(client_socket, response, BUFFER_SIZE, 0) < 0) {
-            error("Failed to receive response from the server");
-        }
+        read(client_socket, response, BUFFER_SIZE);
         printf("%s\n", response);
     }
 

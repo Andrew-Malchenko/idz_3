@@ -20,6 +20,7 @@ typedef struct {
 typedef struct {
     int bee_socket;
     int bear_socket;
+    int honey_pot_limit;
     HoneyPot *honey_pot;
 } ClientData;
 
@@ -31,15 +32,11 @@ void error(const char *message) {
 
 void eats_honey(int bear_socket){
     printf("Bear is eating honey\n");
-    if (send(bear_socket, "up_bear", strlen("up_bear"), 0) < 0) {
-            error("Failed to send message to the server");
-    }
+    write(bear_socket, "up_bear", strlen("up_bear"));
     char response[BUFFER_SIZE];
     while (1) {
         memset(response, 0, sizeof(response));
-        if (recv(bear_socket, response, BUFFER_SIZE, 0) < 0) {
-            error("Failed to receive response from the server");
-        }
+        read(bear_socket, response, BUFFER_SIZE);
         if(strcmp(response, "bear_sleep") == 0){
            break;
         }
@@ -51,23 +48,22 @@ void* handle_client(void *arg) {
     ClientData *client_data = (ClientData*)arg;
     int client_socket = client_data->bee_socket;
     int bear_socket = client_data->bear_socket;
+    int honey_pot_limit = client_data->honey_pot_limit;
     HoneyPot *honey_pot = client_data->honey_pot;
     char response[BUFFER_SIZE];
     int read_size;
 
     while (1) {
         memset(response, 0, sizeof(response));
-        if (recv(client_socket, response, BUFFER_SIZE, 0) < 0) {
-            error("Failed to receive response from the server");
-        }
+        read(client_socket, response, BUFFER_SIZE);
 
-        if (strcmp(response, "collect_honey") == 0) {
+        
             pthread_mutex_lock(&(honey_pot->mutex));
 
             honey_pot->honey_level++;
-            printf("Bee added honey to the pot.\n");
+            printf("Bee number %d added honey to the pot.\n", atoi(response));
 
-            if (honey_pot->honey_level == 5) {
+            if (honey_pot->honey_level == honey_pot_limit) {
                 honey_pot->bear_sleeping = 0;
                 printf("The honey pot is full!\n");
                 eats_honey(bear_socket);
@@ -77,7 +73,6 @@ void* handle_client(void *arg) {
             }
 
             pthread_mutex_unlock(&(honey_pot->mutex));
-        }
     }
 
     close(client_socket);
@@ -85,10 +80,14 @@ void* handle_client(void *arg) {
 }
 
 int main(int argc, char **argv) {
-    int server_socket, client_socket, opt = 1;
+    int server_socket, client_socket, opt = 1, count_bee = atoi(argv[4]);
     struct sockaddr_in server_address, client_address;
     HoneyPot honey_pot = { 0, 10, PTHREAD_MUTEX_INITIALIZER };
     pthread_t threads[MAX_THREADS];
+    
+    if(count_bee <= 0){
+       error("Incorrect count bee");
+     }
 
     // Create server socket
     if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
@@ -128,9 +127,7 @@ int main(int argc, char **argv) {
 
         char response[BUFFER_SIZE];
         memset(response, 0, sizeof(response));
-        if (recv(client_socket, response, BUFFER_SIZE, 0) < 0) {
-            error("Failed to receive response from the server");
-        }
+        read(client_socket, response, BUFFER_SIZE);
         if (strcmp(response, "bee") == 0) {
             printf("Client bee connected. Waiting for honey collection...\n");
             bee_socket = client_socket;
@@ -147,9 +144,13 @@ int main(int argc, char **argv) {
     ClientData *client_data = (ClientData*)malloc(sizeof(ClientData));
 
     client_data->honey_pot = &honey_pot;
+    client_data->honey_pot_limit = atoi(argv[3]);
     client_data->bee_socket = bee_socket;
     client_data->bear_socket = bear_socket;
-
+    
+    char str[BUFFER_SIZE];
+    snprintf(str, BUFFER_SIZE - 1, "%d", count_bee);
+    write(bee_socket, str, strlen(str));
     if (pthread_create(&threads[0], NULL, handle_client, (void*)client_data) != 0) {
         error("Failed to create thread");
     }

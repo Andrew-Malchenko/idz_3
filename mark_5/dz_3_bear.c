@@ -34,30 +34,16 @@ int main(int argc, char **argv) {
     if (connect(client_socket, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
         error("Failed to connect to the server");
     }
-    if (send(client_socket, "bear", strlen("bear"), 0) < 0) {
-        error("Failed to send message to the server");
-    }
+    write(client_socket, "bear", strlen("bear"));
     while (1) {
         printf("Bear is sleep\n");
         char response[BUFFER_SIZE];
         memset(response, 0, sizeof(response));
-        if (recv(client_socket, response, BUFFER_SIZE, 0) < 0) {
-            error("Failed to receive response from the server");
-        }
-        printf("Press ENTER to sleep bear or type 'exit' to quit: ");
-        fgets(buffer, BUFFER_SIZE, stdin);
-
-        // Remove newline character
-        buffer[strcspn(buffer, "\n")] = 0;
-
-        if (strcmp(buffer, "exit") == 0) {
-            break;
-        }
+        read(client_socket, response, BUFFER_SIZE);
+        sleep(1);
 
         // Send "collect_honey" message to the server
-        if (send(client_socket, "bear_sleep", strlen("bear_sleep"), 0) < 0) {
-            error("Failed to send message to the server");
-        }
+        write(client_socket, "bear_sleep", strlen("bear_sleep"));
     }
 
     close(client_socket);

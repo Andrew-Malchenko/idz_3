@@ -19,6 +19,9 @@ int main(int argc, char **argv) {
     int client_socket;
     struct sockaddr_in server_address;
     char buffer[BUFFER_SIZE];
+    char response[BUFFER_SIZE];
+    int count_bee = 0;
+    int i=0;
 
     // Create client socket
     if ((client_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
@@ -34,25 +37,19 @@ int main(int argc, char **argv) {
     if (connect(client_socket, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
         error("Failed to connect to the server");
     }
-    if (send(client_socket, "bee", strlen("bee"), 0) < 0) {
-        error("Failed to send message to the server");
-    }
-
+    write(client_socket, "bee", strlen("bee"));
+    memset(response, 0, sizeof(response));
+    read(client_socket, response, BUFFER_SIZE);
+    count_bee = atoi(response);
+    printf("%d", count_bee);
     while (1) {
-        printf("Press ENTER to collect honey or type 'exit' to quit: ");
-        fgets(buffer, BUFFER_SIZE, stdin);
-
-        // Remove newline character
-        buffer[strcspn(buffer, "\n")] = 0;
-
-        if (strcmp(buffer, "exit") == 0) {
-            break;
-        }
-
-        // Send "collect_honey" message to the server
-        if (send(client_socket, "collect_honey", strlen("collect_honey"), 0) < 0) {
-            error("Failed to send message to the server");
-        }
+        sleep(2);
+        i = i % count_bee;
+        char str[BUFFER_SIZE];
+        snprintf(str, BUFFER_SIZE - 1, "%d", i);
+        // Send "number bee" message to the server
+        write(client_socket, str, strlen(str));
+        i++;
     }
 
     close(client_socket);
